@@ -3,7 +3,10 @@ window.isGettingList = false
 window.gType = null
 
 window.getKifuData = {}
-window.clipboard = null
+window.url = null
+
+# 取得制限
+window.GET_LIMIT = 1000
 
 # 終局表現
 window.ENDING = 
@@ -63,7 +66,9 @@ window.getKifu = ->
     sente: $(@).attr('dt-sente')
     gote: $(@).attr('dt-gote')
     game_type: $(@).attr('dt-gametype')
-  $.getJSON('http://localhost:7777/'+url).done(window.getKifuCallback)
+  $.getJSON('http://localhost:7777/'+url)
+  .done(window.getKifuCallback)
+
 
 window.getKifuCallback = (response)->
   response = response['response']
@@ -203,6 +208,10 @@ window.getIndexes = (userName)->
   window.gTypes.push '' if $('#10m').prop('checked')
   window.gTypes.push 'sb' if $('#sb').prop('checked')
   window.gTypes.push 's1' if $('#s1').prop('checked')
+  window.getTimes =
+    '':0
+    'sb':0
+    's1':0
   window.getIndex()
 
 window.getIndex = ->
@@ -211,10 +220,20 @@ window.getIndex = ->
   url = 'https://shogiwars.heroz.jp/users/history/'+window.myName+'/web_app?locale=ja'
   url += '&gtype='+gType if gType isnt ''
 
-  console.log('http://localhost:7777/'+url)
-  $.getJSON('http://localhost:7777/'+url).done(window.getIndexCallback)
+  window.getIndexCall('http://localhost:7777/'+url)
 
-window.getIndexCallback = (response)->
+window.getIndexCall = (url = null)->
+  window.url = url unless url is null
+  console.log(window.url)
+  $.getJSON(window.url).done(window.getIndexCallbackSuccess).fail(window.getIndexCallbackFail)
+
+window.getIndexCallbackFail = ->
+  window.getIndexCall()
+
+window.getIndexCallbackSuccess = (response)->
+  # 取得制限
+  window.getTimes[window.gType]++
+
   parser = new DOMParser();
   doc = parser.parseFromString(response['response'], "text/html");
 
@@ -259,10 +278,13 @@ window.getIndexCallback = (response)->
   # 次のページがあればそれも取得
   isNext = false
   for a in doc.getElementsByTagName('a')
-    if a.innerText is '次へ>>'
-      window.getIndex()
-      isNext = true
-      break
+    if a.innerText is '次へ>>' or a.innerText is '次へ&gt;&gt;'
+      # 取得回数制限
+      unless window.getTimes[window.gType] >= window.GET_LIMIT
+        url = 'https://shogiwars.heroz.jp'+$(a).attr('href')
+        window.getIndexCall('http://localhost:7777/'+url)
+        isNext = true
+        break
   # 次のページがなければ次のゲームモード
   window.getIndex() unless isNext
 

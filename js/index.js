@@ -9,7 +9,9 @@ window.gType = null;
 
 window.getKifuData = {};
 
-window.clipboard = null;
+window.url = null;
+
+window.GET_LIMIT = 1000;
 
 window.ENDING = {
   TIME_UP: ['SENTE_WIN_DISCONNECT', 'SENTE_WIN_TIMEOUT', 'GOTE_WIN_DISCONNECT', 'GOTE_WIN_TIMEOUT'],
@@ -207,6 +209,11 @@ window.getIndexes = function(userName) {
   if ($('#s1').prop('checked')) {
     window.gTypes.push('s1');
   }
+  window.getTimes = {
+    '': 0,
+    'sb': 0,
+    's1': 0
+  };
   return window.getIndex();
 };
 
@@ -220,12 +227,27 @@ window.getIndex = function() {
   if (gType !== '') {
     url += '&gtype=' + gType;
   }
-  console.log('http://localhost:7777/' + url);
-  return $.getJSON('http://localhost:7777/' + url).done(window.getIndexCallback);
+  return window.getIndexCall('http://localhost:7777/' + url);
 };
 
-window.getIndexCallback = function(response) {
-  var a, content, div, doc, isFirst, isFriend, isMe, isNext, isWin, j, l, len, len1, len2, len3, name, o, parser, player, q, rank, ref, ref1, ref2, ref3, ref4, result;
+window.getIndexCall = function(url) {
+  if (url == null) {
+    url = null;
+  }
+  if (url !== null) {
+    window.url = url;
+  }
+  console.log(window.url);
+  return $.getJSON(window.url).done(window.getIndexCallbackSuccess).fail(window.getIndexCallbackFail);
+};
+
+window.getIndexCallbackFail = function() {
+  return window.getIndexCall();
+};
+
+window.getIndexCallbackSuccess = function(response) {
+  var a, content, div, doc, isFirst, isFriend, isMe, isNext, isWin, j, l, len, len1, len2, len3, name, o, parser, player, q, rank, ref, ref1, ref2, ref3, ref4, result, url;
+  window.getTimes[window.gType]++;
   parser = new DOMParser();
   doc = parser.parseFromString(response['response'], "text/html");
   ref = doc.getElementsByClassName('contents');
@@ -269,10 +291,13 @@ window.getIndexCallback = function(response) {
   ref4 = doc.getElementsByTagName('a');
   for (q = 0, len3 = ref4.length; q < len3; q++) {
     a = ref4[q];
-    if (a.innerText === '次へ>>') {
-      window.getIndex();
-      isNext = true;
-      break;
+    if (a.innerText === '次へ>>' || a.innerText === '次へ&gt;&gt;') {
+      if (!(window.getTimes[window.gType] >= window.GET_LIMIT)) {
+        url = 'https://shogiwars.heroz.jp' + $(a).attr('href');
+        window.getIndexCall('http://localhost:7777/' + url);
+        isNext = true;
+        break;
+      }
     }
   }
   if (!isNext) {
