@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width">
+<title>将棋ウォーズ棋譜チェッカー</title>
+<link rel="shortcut icon" href="favicon.ico">
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-2.2.1.min.js" integrity="sha256-gvQgAFzTH6trSrAWoH1iPo9Xc96QxSZ3feW6kem+O00=" crossorigin="anonymous"></script>
+
+<!-- jQuery Plugin -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.1/jquery.datetimepicker.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.1/jquery.datetimepicker.min.js"></script>
+
+
+<!-- Bootstrap -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/flat-ui/2.3.0/css/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/flat-ui/2.3.0/css/flat-ui.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flat-ui/2.3.0/js/flat-ui.min.js"></script>
+
+<!-- mine -->
+<script src="./js/clipboard.min.js"></script>
+<script src="./js/index.js"></script>
+<link rel="stylesheet" type="text/css" href="./css/index.css">
+
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="./">将棋ウォーズ棋譜チェッカー</a>
+    </div>
+
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <!-- 左側 -->
+      <!--
+      <ul class="nav navbar-nav">
+        <li><a href="#">リンク</a></li>
+      </ul>
+      -->
+
+      <!-- 右側 -->
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="https://github.com/rev84/" target="_blank">GitHub</a></li>
+        <li><a href="https://twitter.com/rev84" target="_blank">developed by @rev84</a></li>
+        <!--
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">ドロップダウン<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="#">ドロップダウンメニュー</a></li>
+          </ul>
+        </li>
+        -->
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="center">
+    <button id="opne_user" class="btn btn-lg btn-info">ユーザを設定</button>
+  </div>
+
+  <div id="result">
+    <div class="center"><span id="user_name"></span>の成績</div>
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th colspan="6">対戦</th>
+          <th>分類</th>
+          <th>時刻</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="modal_clipboard" class="modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">csaを生成しました</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <textarea class="form-control" id="clipboard"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-hg btn-primary" id="copy" data-dismiss="modal">クリップボードにコピーする</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal_change_user" class="modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">取得するユーザ名を入力</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+
+          <div class="center">
+            <span class="radio-inline">
+              <label class="checkbox checkbox-inline">
+                  <input type="checkbox" class="checkbox" id="10m" data-toggle="checkbox" checked>10分切れ負け
+              </label>
+              <label class="checkbox checkbox-inline">
+                  <input type="checkbox" class="checkbox" id="sb" data-toggle="checkbox" checked>3分切れ負け
+              </label>
+              <label class="checkbox checkbox-inline">
+                  <input type="checkbox" class="checkbox" id="s1" data-toggle="checkbox" checked>10秒
+              </label>
+            </span>
+          </div>
+
+          <input type="text" id="user_name_input" class="font-control">
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">閉じる</button>
+            <button type="button" class="btn btn-primary" id="start" data-dismiss="modal">一覧取得</button>
+          </div>
+      </div>
+    </div>
+  </div>
+  
+
+</body>
+</html>

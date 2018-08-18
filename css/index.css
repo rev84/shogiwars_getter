@@ -1,0 +1,41 @@
+th {
+  text-align:center;
+}
+.center {
+  text-align:center;
+}
+.text {
+  border:double 1px #000000;
+  max-width:600px;
+}
+.win {
+  background-color: #ffd6d9;
+  font-weight: bold;
+}
+.lose {
+
+}
+.sente {
+  background-color: #d1ffd1;
+  font-weight: bold;
+  text-align:center;
+}
+.gote {
+  text-align:center;
+}
+.m10 {
+  background-color: #d1ffd1;
+  text-align:center;
+}
+.m3 {
+  background-color: #fffecc;
+  text-align:center;
+}
+.s10 {
+  background-color: #ccfff9;
+  text-align:center;
+}
+#user_name {
+  font-size: 130%;
+  font-weight: bold;
+}
