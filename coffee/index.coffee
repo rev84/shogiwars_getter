@@ -61,16 +61,22 @@ window.setUser = (user)->
   window.getIndexes(user)
 
 window.getKifu = ->
-  url = 'https:'+$(@).attr('dt-url')
+  url = 'http://localhost:7777/https:'+$(@).attr('dt-url')
   window.getKifuData = 
     sente: $(@).attr('dt-sente')
     gote: $(@).attr('dt-gote')
     game_type: $(@).attr('dt-gametype')
-  $.getJSON('http://localhost:7777/'+url)
-  .done(window.getKifuCallback)
+  window.getKifuCall(url)
 
+window.getKifuCall = (url = null)->
+  window.url = url unless url is null
+  console.log(window.url)
+  $.getJSON(window.url).done(window.getKifuCallbackSuccess).fail(window.getKifuCallbackFail)
 
-window.getKifuCallback = (response)->
+window.getKifuCallbackFail = ->
+  window.getKifuCall()
+
+window.getKifuCallbackSuccess = (response)->
   response = response['response']
   res = response.match(/receiveMove\("([^"]+)"\);/)[1].split("\t")
   csa = window.sw2csa(res)
@@ -90,8 +96,8 @@ window.sw2csa = (sw)->
   # 持ち時間
   buf += '$TIME_LIMIT:'
   buf += switch window.getKifuData.game_type
-    when 's1' then '00:00+10'
-    when 'sb' then '00:03+00'
+    when '10秒' then '00:00+10'
+    when '3分' then '00:03+00'
     else '00:10+00'
   buf += "\n"
   # 平手の局面
@@ -100,7 +106,8 @@ window.sw2csa = (sw)->
   buf += "+\n"
   # 指し手と消費時間
   restTime = switch window.getKifuData.game_type
-    when 'sb' then 60*3
+    when '10秒' then 60*60
+    when '3分' then 60*3
     else 60*10
   restTimes = 
     sente: restTime
@@ -126,13 +133,10 @@ window.sw2csa = (sw)->
       isFirst = te.substr(0, 1) is '+'
       rest = Number(rest.substr(1))
       buf += te+"\n"
-      switch window.getKifuData.game_type
-        when 's1'
-          buf += 'T'+(10 - rest)+"\n"
-        else
-          name = if isFirst then 'sente' else 'gote'
-          buf += 'T'+(restTimes[name] - rest)+"\n"
-          restTimes[name] = rest
+
+      name = if isFirst then 'sente' else 'gote'
+      buf += 'T'+(restTimes[name] - rest)+"\n"
+      restTimes[name] = rest
   buf
 
 window.finish = ->

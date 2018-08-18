@@ -52,16 +52,31 @@ window.setUser = function(user) {
 
 window.getKifu = function() {
   var url;
-  url = 'https:' + $(this).attr('dt-url');
+  url = 'http://localhost:7777/https:' + $(this).attr('dt-url');
   window.getKifuData = {
     sente: $(this).attr('dt-sente'),
     gote: $(this).attr('dt-gote'),
     game_type: $(this).attr('dt-gametype')
   };
-  return $.getJSON('http://localhost:7777/' + url).done(window.getKifuCallback);
+  return window.getKifuCall(url);
 };
 
-window.getKifuCallback = function(response) {
+window.getKifuCall = function(url) {
+  if (url == null) {
+    url = null;
+  }
+  if (url !== null) {
+    window.url = url;
+  }
+  console.log(window.url);
+  return $.getJSON(window.url).done(window.getKifuCallbackSuccess).fail(window.getKifuCallbackFail);
+};
+
+window.getKifuCallbackFail = function() {
+  return window.getKifuCall();
+};
+
+window.getKifuCallbackSuccess = function(response) {
   var csa, res;
   response = response['response'];
   res = response.match(/receiveMove\("([^"]+)"\);/)[1].split("\t");
@@ -80,9 +95,9 @@ window.sw2csa = function(sw) {
   buf += '$TIME_LIMIT:';
   buf += (function() {
     switch (window.getKifuData.game_type) {
-      case 's1':
+      case '10秒':
         return '00:00+10';
-      case 'sb':
+      case '3分':
         return '00:03+00';
       default:
         return '00:10+00';
@@ -93,7 +108,9 @@ window.sw2csa = function(sw) {
   buf += "+\n";
   restTime = (function() {
     switch (window.getKifuData.game_type) {
-      case 'sb':
+      case '10秒':
+        return 60 * 60;
+      case '3分':
         return 60 * 3;
       default:
         return 60 * 10;
@@ -125,15 +142,9 @@ window.sw2csa = function(sw) {
       isFirst = te.substr(0, 1) === '+';
       rest = Number(rest.substr(1));
       buf += te + "\n";
-      switch (window.getKifuData.game_type) {
-        case 's1':
-          buf += 'T' + (10 - rest) + "\n";
-          break;
-        default:
-          name = isFirst ? 'sente' : 'gote';
-          buf += 'T' + (restTimes[name] - rest) + "\n";
-          restTimes[name] = rest;
-      }
+      name = isFirst ? 'sente' : 'gote';
+      buf += 'T' + (restTimes[name] - rest) + "\n";
+      restTimes[name] = rest;
     }
   }
   return buf;
