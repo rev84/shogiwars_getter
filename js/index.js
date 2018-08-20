@@ -24,12 +24,13 @@ window.ENDING = {
 };
 
 $().ready(function() {
-  var user;
+  var checked, id, j, len, onCheckboxChange, ref, results, user;
   $(':checkbox').radiocheck();
   user = Utl.getLs('USERNAME');
   if (user === null) {
     $('#modal_change_user').modal();
   } else {
+    $('#user_name_input').val(user);
     window.getIndexes(user);
   }
   $('#start').on('click', function() {
@@ -40,9 +41,24 @@ $().ready(function() {
       return $('#modal_change_user').modal();
     }
   });
-  return $('#copy').on('click', function() {
+  $('#copy').on('click', function() {
     return window.execCopy($('#clipboard').html());
   });
+  onCheckboxChange = function() {
+    return Utl.setLs('CHECKED_' + $(this).attr('id'), $(this).prop('checked'));
+  };
+  $('#10m, #sb, #s1, #only1page').on('change', onCheckboxChange);
+  ref = ['10m', 'sb', 's1', 'only1page'];
+  results = [];
+  for (j = 0, len = ref.length; j < len; j++) {
+    id = ref[j];
+    checked = Utl.getLs('CHECKED_' + id);
+    if (checked !== null) {
+      $('#' + id).prop('checked', checked);
+    }
+    results.push(onCheckboxChange($('#' + id)));
+  }
+  return results;
 });
 
 window.setUser = function(user) {
@@ -302,7 +318,7 @@ window.getIndexCallbackSuccess = function(response) {
   ref4 = doc.getElementsByTagName('a');
   for (q = 0, len3 = ref4.length; q < len3; q++) {
     a = ref4[q];
-    if (a.innerText === '次へ>>' || a.innerText === '次へ&gt;&gt;') {
+    if (!($('#only1page').prop('checked')) && (a.innerText === '次へ>>' || a.innerText === '次へ&gt;&gt;')) {
       if (!(window.getTimes[window.gType] >= window.GET_LIMIT)) {
         url = 'https://shogiwars.heroz.jp' + $(a).attr('href');
         window.getIndexCall('http://localhost:7777/' + url);

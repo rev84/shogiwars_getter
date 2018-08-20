@@ -45,6 +45,7 @@ $().ready ->
   if user is null
     $('#modal_change_user').modal()
   else
+    $('#user_name_input').val(user)
     window.getIndexes(user)
 
   $('#start').on 'click', ->
@@ -55,6 +56,17 @@ $().ready ->
 
   $('#copy').on 'click', ->
     window.execCopy($('#clipboard').html())
+
+  # チェック状態の保存
+  onCheckboxChange = -> Utl.setLs 'CHECKED_'+$(@).attr('id'), $(@).prop('checked')
+  $('#10m, #sb, #s1, #only1page').on 'change', onCheckboxChange
+  # 復元
+  for id in ['10m', 'sb', 's1', 'only1page']
+    checked = Utl.getLs 'CHECKED_'+id
+    if checked isnt null
+      $('#'+id).prop('checked', checked)
+    onCheckboxChange($('#'+id))
+  
 
 window.setUser = (user)->
   Utl.setLs 'USERNAME', user
@@ -282,7 +294,7 @@ window.getIndexCallbackSuccess = (response)->
   # 次のページがあればそれも取得
   isNext = false
   for a in doc.getElementsByTagName('a')
-    if a.innerText is '次へ>>' or a.innerText is '次へ&gt;&gt;'
+    if not($('#only1page').prop('checked')) and (a.innerText is '次へ>>' or a.innerText is '次へ&gt;&gt;')
       # 取得回数制限
       unless window.getTimes[window.gType] >= window.GET_LIMIT
         url = 'https://shogiwars.heroz.jp'+$(a).attr('href')
