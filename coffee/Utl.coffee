@@ -448,7 +448,7 @@ class window.Utl
     # ロック待ちミリ秒（1回あたり）
     LOCK_WAIT_MSEC: 50
     # タイムアウトにするミリ秒
-    TIMEOUT_MSEC: 1000
+    TIMEOUT_MSEC: 5000
 
     constructor:(@dbName = 'default', @dbVersion = 1)->
       open = window.indexedDB.open(@dbName, @dbVersion)
@@ -466,13 +466,13 @@ class window.Utl
 
       transaction = @db.transaction(@STORE_NAME, 'readwrite')
       store = transaction.objectStore(@STORE_NAME)
-      putRequest = store.put({kvstore_key: key, kvstore_value: JSON.stringify(value) })
-      putRequest.onsuccess = (evt)=>
+      request = store.put({kvstore_key: key, kvstore_value: JSON.stringify(value) })
+      request.onsuccess = (evt)=>
         if token is @token
           @capture(true, token)
         else
           @capture(false, token)
-      putRequest.onerror = (evt)=>
+      request.onerror = (evt)=>
         @capture(false, token)
 
       await @waitCapture()
@@ -487,10 +487,10 @@ class window.Utl
       token = @genToken()
       @lock(token)
 
-      transaction = @db.transaction(@STORE_NAME, 'readwrite')
+      transaction = @db.transaction(@STORE_NAME, 'readonly')
       store = transaction.objectStore(@STORE_NAME)
-      putRequest = store.get(key)
-      putRequest.onsuccess = (evt)=>
+      request = store.get(key)
+      request.onsuccess = (evt)=>
         try
           res = JSON.parse evt.target.result.kvstore_value
         catch
@@ -499,14 +499,67 @@ class window.Utl
           @capture(res, token)
         else
           @unlock(token)
-      putRequest.onerror = (evt)=>
-        @unlock(token)
 
       await @waitCapture()
       if @isCaptured
         @unlock(token)
       else
         null
+
+    # awaitで使う
+    gets:(keys)->
+      await @waitUnLock()
+      token = @genToken()
+      @lock(token)
+
+      res = {}
+      transaction = @db.transaction(@STORE_NAME, 'readonly')
+      store = transaction.objectStore(@STORE_NAME)
+
+      for key in keys
+        request = store.get(key)
+        request.onsuccess = (evt)=>
+          try
+            res[evt.target.result.kvstore_key] = JSON.parse evt.target.result.kvstore_value
+          catch
+            res[evt.target.result.kvstore_key] = null
+      transaction.oncomplete = (evt)=>
+        @capture(res, token)
+
+      await @waitCapture()
+      if @isCaptured
+        @unlock(token)
+      else
+        null
+
+    # awaitで呼ぶ
+    getAllKeys:->
+      await @waitUnLock()
+      token = @genToken()
+      @lock(token)
+
+      keys = []
+      transaction = @db.transaction(@STORE_NAME, 'readonly')
+      store = transaction.objectStore(@STORE_NAME)
+      request = store.openCursor()
+      request.onsuccess = (evt)=>
+        cursor = evt.target.result
+        if cursor
+          keys.push cursor.key
+          cursor.continue()
+        else
+          @capture(keys, token)
+      request.onerror = (evt)=>
+        @unlock(token)
+
+      await @waitCapture()
+      if @isCaptured
+        @unlock(token)
+      else
+        []
+
+    destroy:->
+      window.indexedDB.deleteDatabase(@dbName)
 
     unlock:(token = null)->
       if token is null or token is @token

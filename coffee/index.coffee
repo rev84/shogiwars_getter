@@ -1,4 +1,4 @@
-window.results = []
+window.db = null
 window.isGettingList = false
 window.gType = null
 
@@ -39,6 +39,8 @@ window.ENDING =
   ]
 
 $().ready ->
+  # DB
+  window.db = new Utl.IndexedDB()
   $(':checkbox').radiocheck()
 
   user = Utl.getLs('USERNAME')
@@ -54,9 +56,6 @@ $().ready ->
   $('#open_user').on 'click', ->
     $('#modal_change_user').modal() unless window.isGettingList
 
-  $('#copy').on 'click', ->
-    window.execCopy($('#clipboard').html())
-
   # チェック状態の保存
   onCheckboxChange = -> Utl.setLs 'CHECKED_'+$(@).attr('id'), $(@).prop('checked')
   $('#10m, #sb, #s1, #only1page').on 'change', onCheckboxChange
@@ -68,46 +67,48 @@ $().ready ->
     onCheckboxChange($('#'+id))
   
 
+  # メッセージ内の×ボタンクリックでメッセージを非表示にする
+  $('.alert .close').on 'click', ->
+    $(@).parents('.alert').hide()
+
 window.setUser = (user)->
   Utl.setLs 'USERNAME', user
   window.getIndexes(user)
 
-window.getKifu = ->
-  url = 'http://localhost:7777/https:'+$(@).attr('dt-url')
-  window.getKifuData = 
-    sente: $(@).attr('dt-sente')
-    gote: $(@).attr('dt-gote')
-    game_type: $(@).attr('dt-gametype')
-  window.getKifuCall(url)
+window.getKifu = (url)->
+  console.log(url)
+  $.getJSON('http://localhost:7777/'+url).done((r)-> window.getKifuCallbackSuccess(r)).fail(-> window.getKifuCallbackFail(url))
 
-window.getKifuCall = (url = null)->
-  window.url = url unless url is null
-  console.log(window.url)
-  $.getJSON(window.url).done(window.getKifuCallbackSuccess).fail(window.getKifuCallbackFail)
-
-window.getKifuCallbackFail = ->
-  window.getKifuCall()
+window.getKifuCallbackFail = (url)->
+  window.getKifu(url)
 
 window.getKifuCallbackSuccess = (response)->
-  response = response['response']
-  res = response.match(/receiveMove\("([^"]+)"\);/)[1].split("\t")
-  csa = window.sw2csa(res)
-  
-  $('#clipboard').html(csa)
-  $('#modal_clipboard').modal()
+  url = response['url']
+  res = response['response']
+  kifuName = window.url2kifuName(url)
+  sw = res.match(/receiveMove\("([^"]+)"\);/)[1].split("\t")
+  # DBに保存
+  dbrec = await window.db.get kifuName
+  csa = window.sw2csa(sw, dbrec)
+  dbrec.csa = csa
+  await window.db.set kifuName, dbrec
 
-window.sw2csa = (sw)->
+window.sw2csa = (sw, dbrec)->
+  game_type = switch dbrec.game_type
+    when 's1' then '10秒'
+    when 'sb' then '3分'
+    else '10分'
   buf = ''
   # バージョン
   buf += 'V2.2'+"\n"
   # 対局者名
-  buf += 'N+'+window.getKifuData.sente+"\n"
-  buf += 'N-'+window.getKifuData.gote+"\n"
+  buf += 'N+'+dbrec.sente.name+'('+dbrec.sente.rank+")\n"
+  buf += 'N-'+dbrec.gote.name+'('+dbrec.gote.rank+")\n"
   # 対局場所
-  buf += '$SITE:将棋ウォーズ('+window.getKifuData.game_type+')'+"\n"
+  buf += '$SITE:将棋ウォーズ('+game_type+')'+"\n"
   # 持ち時間
   buf += '$TIME_LIMIT:'
-  buf += switch window.getKifuData.game_type
+  buf += switch game_type
     when '10秒' then '00:00+10'
     when '3分' then '00:03+00'
     else '00:10+00'
@@ -117,7 +118,7 @@ window.sw2csa = (sw)->
   # 先手番
   buf += "+\n"
   # 指し手と消費時間
-  restTime = switch window.getKifuData.game_type
+  restTime = switch game_type
     when '10秒' then 60*60
     when '3分' then 60*3
     else 60*10
@@ -140,7 +141,7 @@ window.sw2csa = (sw)->
     else if window.ENDING.TSUMI.indexOf(s) >= 0
       buf += "%TSUMI\n"
     else
-      console.log(s)
+      #console.log(s)
       [te, rest] = s.split(',')
       isFirst = te.substr(0, 1) is '+'
       rest = Number(rest.substr(1))
@@ -158,22 +159,34 @@ window.finish = ->
   
 
 window.draw = ->
-  window.results.sort (a, b)->
+  results = await window.getMine()
+  results.sort (a, b)->
     b.date - a.date
 
   $('#user_name').html(window.myName)
 
   tbody = $('#result').find('table').find('tbody')
   tbody.html('')
-  for res in window.results
-    is_win = res.is_win
-    is_first = res.is_first
+  for res in results
+    if res.sente.name is window.myName
+      is_win = if res.win is 0 then 1 else 0
+      is_first = true
+      my_rank = res.sente.rank
+      my_name = res.sente.name
+      op_rank = res.gote.rank
+      op_name = res.gote.name
+    else
+      is_win = if res.win is 1 then 1 else 0
+      is_first = false
+      my_rank = res.gote.rank
+      my_name = res.gote.name
+      op_rank = res.sente.rank
+      op_name = res.sente.name
+    if res.win is 2
+      is_win = 2
+
     is_friend = res.is_friend
     url = res.url
-    my_rank = res.my_rank
-    my_name = res.my_name
-    op_rank = res.opponent_rank
-    op_name = res.opponent_name
     game_type = switch res.game_type
       when 'sb' then '3分'
       when 's1' then '10秒'
@@ -185,7 +198,7 @@ window.draw = ->
     dt = window.dateFormat(res.date)
 
     tr = $('<tr>').append(
-      $('<td>').addClass(if is_win then 'win' else 'lose').html(my_name)
+      $('<td>').addClass(if is_win is 1 then 'win' else if is_win is 0 then 'lose' else 'draw').html(my_name)
     ).append(
       $('<td>').addClass('center').html(my_rank)
     ).append(
@@ -195,7 +208,7 @@ window.draw = ->
     ).append(
       $('<td>').addClass('center').html(op_rank+(if is_friend then '<br><span class="label label-danger">友達</span>' else ''))
     ).append(
-      $('<td>').addClass(if is_win then 'lose' else 'win').html(op_name)
+      $('<td>').addClass(if is_win is 1 then 'lose' else if is_win is 0 then 'win' else 'draw').html(op_name)
     ).append(
       $('<td>').addClass(game_type_class).html(game_type)
     ).append(
@@ -204,12 +217,12 @@ window.draw = ->
       $('<td>').addClass('center').append(
         $('<button>')
         .addClass('btn btn-sm btn-primary')
-        .attr('dt-url', url)
-        .attr('dt-sente', if is_first then my_name else op_name)
-        .attr('dt-gote', if is_first then op_name else my_name)
-        .attr('dt-gametype', game_type)
+        .attr('dt-key', res.kifu_name)
         .html('コピー')
-        .on('click', window.getKifu)
+        .on('click', ->
+          rec = await window.db.get($(@).attr('dt-key'))
+          window.execCopy(rec.csa)
+        )
       )
     )
 
@@ -218,7 +231,6 @@ window.draw = ->
 window.getIndexes = (userName)->
   return if window.isGettingList
   window.isGettingList = true
-  window.results = []
   window.myName = userName
   window.gTypes = []
   window.gTypes.push '' if $('#10m').prop('checked')
@@ -241,12 +253,14 @@ window.getIndex = ->
 window.getIndexCall = (url = null)->
   window.url = url unless url is null
   console.log(window.url)
-  $.getJSON(window.url).done(window.getIndexCallbackSuccess).fail(window.getIndexCallbackFail)
+  $.getJSON(window.url).done((r)-> window.getIndexCallbackSuccess(r)).fail(-> window.getIndexCallbackFail())
 
 window.getIndexCallbackFail = ->
   window.getIndexCall()
 
 window.getIndexCallbackSuccess = (response)->
+  # 既に取得した棋譜があるか
+  isExistAlreadyGot = false
   # 取得制限
   window.getTimes[window.gType]++
 
@@ -257,28 +271,35 @@ window.getIndexCallbackSuccess = (response)->
   for content in doc.getElementsByClassName('contents')
     result = {}
     
+    # 千日手パターン
+    result.win = 2
     # 対戦者の情報
     isFirst = true
     for player in content.getElementsByClassName('history_prof')
       [name, rank] = player.getElementsByTagName('table')[0].getElementsByTagName('td')[1].innerText.split(" ")
       isWin = player.classList.contains('win')
-      isMe  = (window.myName is name)
 
-      if isMe
-        result.my_name = name
-        result.my_rank = rank
-        result.is_win = isWin
-        result.is_first = isFirst
+      if isFirst
+        result.sente = 
+          name: name
+          rank: rank
       else
-        result.opponent_name = name
-        result.opponent_rank = rank
-        result.is_win = not isWin
+        result.gote = 
+          name: name
+          rank: rank
+
+      if isWin
+        result.win = if isFirst then 0 else 1
 
       isFirst = false
+
     # 時刻
-    result.date = new Date(content.getElementsByTagName('div')[4].innerText)
+    result.date = if result.win is 2
+        new Date(content.getElementsByTagName('div')[3].innerText)
+      else
+        new Date(content.getElementsByTagName('div')[4].innerText)
     # 棋譜のURL
-    result.url = content.getElementsByClassName('short_btn1')[0].getElementsByTagName('a')[0].getAttribute('href')
+    result.url = 'https:'+content.getElementsByClassName('short_btn1')[0].getElementsByTagName('a')[0].getAttribute('href')
     # 友達対戦であるか
     isFriend = false
     for div in content.getElementsByTagName('div')
@@ -289,15 +310,24 @@ window.getIndexCallbackSuccess = (response)->
     # 持ち時間タイプ
     result.game_type = window.gType
 
-    # 結果に追加
-    window.results.push result
+    # IndexedDBにあるか見る
+    key = window.url2kifuName(result.url)
+    stored = await window.db.get key
+    if stored is null
+      await window.db.set key, result
+      # 棋譜も取ってしまう
+      window.getKifu result.url
+    else
+      # 取得済みの棋譜がある
+      isExistAlreadyGot = true
+
 
   # 次のページがあればそれも取得
   isNext = false
   for a in doc.getElementsByTagName('a')
     if not($('#only1page').prop('checked')) and (a.innerText is '次へ>>' or a.innerText is '次へ&gt;&gt;')
-      # 取得回数制限
-      unless window.getTimes[window.gType] >= window.GET_LIMIT
+      # 取得回数制限に引っかかっていなくて、取得済みの棋譜がない
+      if window.getTimes[window.gType] < window.GET_LIMIT and not(isExistAlreadyGot)
         url = 'https://shogiwars.heroz.jp'+$(a).attr('href')
         window.getIndexCall('http://localhost:7777/'+url)
         isNext = true
@@ -306,6 +336,7 @@ window.getIndexCallbackSuccess = (response)->
   window.getIndex() unless isNext
 
 window.dateFormat = (dt)->
+  dt = new Date(dt) if typeof(dt) is 'string'
   y = dt.getFullYear()
   m = dt.getMonth() + 1
   d = dt.getDate()
@@ -335,4 +366,28 @@ window.execCopy = (string) ->
   document.getSelection().selectAllChildren temp
   result = document.execCommand('copy')
   document.body.removeChild temp
+  $('.alert').fadeIn(500).delay(1000).fadeOut(1000)
 
+window.url2kifuName = (url)->
+  spl = url.split('/')
+  spl[spl.length-1].replace(/\?.*$/g, '')
+
+window.getMine = ->
+  results = []
+  keys = await window.db.getAllKeys()
+  count = 0
+  ###
+  for key in keys
+    res = await window.db.get key
+    console.log(''+count+'件ロード') if ++count % 10 is 0
+    res.date = new Date(res.date)
+    res.kifu_name = key
+    results.push res if [res.sente.name, res.gote.name].indexOf(window.myName) >= 0
+  results
+  ###
+  res = await window.db.gets keys
+  for k, v of res
+    v.date = new Date(v.date)
+    v.kifu_name = k
+    results.push v if [v.sente.name, v.gote.name].indexOf(window.myName) >= 0
+  results
