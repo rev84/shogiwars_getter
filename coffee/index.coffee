@@ -193,7 +193,7 @@ window.draw = ->
     ).append(
       $('<td>').addClass(if is_first then 'gote' else 'sente').html(if is_first then '' else '先')
     ).append(
-      $('<td>').addClass('center').html(op_rank)
+      $('<td>').addClass('center').html(op_rank+(if is_friend then '<br><span class="label label-danger">友達</span>' else ''))
     ).append(
       $('<td>').addClass(if is_win then 'lose' else 'win').html(op_name)
     ).append(
@@ -285,6 +285,7 @@ window.getIndexCallbackSuccess = (response)->
       if div.innerText is '友達'
         isFriend = true
         break
+    result.is_friend = isFriend
     # 持ち時間タイプ
     result.game_type = window.gType
 

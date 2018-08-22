@@ -219,7 +219,7 @@ window.draw = function() {
       }
     })();
     dt = window.dateFormat(res.date);
-    tr = $('<tr>').append($('<td>').addClass(is_win ? 'win' : 'lose').html(my_name)).append($('<td>').addClass('center').html(my_rank)).append($('<td>').addClass(is_first ? 'sente' : 'gote').html(is_first ? '先' : '')).append($('<td>').addClass(is_first ? 'gote' : 'sente').html(is_first ? '' : '先')).append($('<td>').addClass('center').html(op_rank)).append($('<td>').addClass(is_win ? 'lose' : 'win').html(op_name)).append($('<td>').addClass(game_type_class).html(game_type)).append($('<td>').addClass('center').html(dt)).append($('<td>').addClass('center').append($('<button>').addClass('btn btn-sm btn-primary').attr('dt-url', url).attr('dt-sente', is_first ? my_name : op_name).attr('dt-gote', is_first ? op_name : my_name).attr('dt-gametype', game_type).html('コピー').on('click', window.getKifu)));
+    tr = $('<tr>').append($('<td>').addClass(is_win ? 'win' : 'lose').html(my_name)).append($('<td>').addClass('center').html(my_rank)).append($('<td>').addClass(is_first ? 'sente' : 'gote').html(is_first ? '先' : '')).append($('<td>').addClass(is_first ? 'gote' : 'sente').html(is_first ? '' : '先')).append($('<td>').addClass('center').html(op_rank + (is_friend ? '<br><span class="label label-danger">友達</span>' : ''))).append($('<td>').addClass(is_win ? 'lose' : 'win').html(op_name)).append($('<td>').addClass(game_type_class).html(game_type)).append($('<td>').addClass('center').html(dt)).append($('<td>').addClass('center').append($('<button>').addClass('btn btn-sm btn-primary').attr('dt-url', url).attr('dt-sente', is_first ? my_name : op_name).attr('dt-gote', is_first ? op_name : my_name).attr('dt-gametype', game_type).html('コピー').on('click', window.getKifu)));
     results.push(tbody.append(tr));
   }
   return results;
@@ -320,6 +320,7 @@ window.getIndexCallbackSuccess = function(response) {
         break;
       }
     }
+    result.is_friend = isFriend;
     // 持ち時間タイプ
     result.game_type = window.gType;
     // 結果に追加
