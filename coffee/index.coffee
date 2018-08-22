@@ -5,9 +5,6 @@ window.gType = null
 window.getKifuData = {}
 window.url = null
 
-# 取得制限
-window.GET_LIMIT = 1000
-
 # 終局表現
 window.ENDING = 
   TIME_UP: [
@@ -57,10 +54,12 @@ $().ready ->
     $('#modal_change_user').modal() unless window.isGettingList
 
   # チェック状態の保存
-  onCheckboxChange = -> Utl.setLs 'CHECKED_'+$(@).attr('id'), $(@).prop('checked')
-  $('#10m, #sb, #s1, #only1page').on 'change', onCheckboxChange
+  onCheckboxChange = ->
+    Utl.setLs 'CHECKED_'+$(@).attr('id'), $(@).prop('checked')
+    await window.draw()
+  $('#10m, #sb, #s1').on 'change', onCheckboxChange
   # 復元
-  for id in ['10m', 'sb', 's1', 'only1page']
+  for id in ['10m', 'sb', 's1']
     checked = Utl.getLs 'CHECKED_'+id
     if checked isnt null
       $('#'+id).prop('checked', checked)
@@ -232,14 +231,7 @@ window.getIndexes = (userName)->
   return if window.isGettingList
   window.isGettingList = true
   window.myName = userName
-  window.gTypes = []
-  window.gTypes.push '' if $('#10m').prop('checked')
-  window.gTypes.push 'sb' if $('#sb').prop('checked')
-  window.gTypes.push 's1' if $('#s1').prop('checked')
-  window.getTimes =
-    '':0
-    'sb':0
-    's1':0
+  window.gTypes = ['', 'sb', 's1']
   window.getIndex()
 
 window.getIndex = ->
@@ -261,8 +253,6 @@ window.getIndexCallbackFail = ->
 window.getIndexCallbackSuccess = (response)->
   # 既に取得した棋譜があるか
   isExistAlreadyGot = false
-  # 取得制限
-  window.getTimes[window.gType]++
 
   parser = new DOMParser();
   doc = parser.parseFromString(response['response'], "text/html");
@@ -326,8 +316,8 @@ window.getIndexCallbackSuccess = (response)->
   isNext = false
   for a in doc.getElementsByTagName('a')
     if not($('#only1page').prop('checked')) and (a.innerText is '次へ>>' or a.innerText is '次へ&gt;&gt;')
-      # 取得回数制限に引っかかっていなくて、取得済みの棋譜がない
-      if window.getTimes[window.gType] < window.GET_LIMIT and not(isExistAlreadyGot)
+      # 取得済みの棋譜がないなら次のページも見る
+      unless isExistAlreadyGot
         url = 'https://shogiwars.heroz.jp'+$(a).attr('href')
         window.getIndexCall('http://localhost:7777/'+url)
         isNext = true
@@ -386,8 +376,13 @@ window.getMine = ->
   results
   ###
   res = await window.db.gets keys
+  is10m = $('#10m').prop('checked')
+  is3m = $('#sb').prop('checked')
+  is10s = $('#s1').prop('checked')
   for k, v of res
     v.date = new Date(v.date)
     v.kifu_name = k
-    results.push v if [v.sente.name, v.gote.name].indexOf(window.myName) >= 0
+    if [v.sente.name, v.gote.name].indexOf(window.myName) >= 0
+      if (is10m and v.game_type is '') or (is3m and v.game_type is 'sb') or (is10s and v.game_type is 's1')
+        results.push v
   results
