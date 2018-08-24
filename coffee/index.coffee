@@ -222,8 +222,15 @@ window.draw = ->
           rec = await window.db.get($(@).attr('dt-key'))
           window.execCopy(rec.csa)
         )
+      ).append(
+        $('<a>')
+        .addClass('btn btn-sm btn-info')
+        .attr('href', res.url)
+        .attr('target', 'wars')
+        .html('棋譜')
       )
     )
+
 
     tbody.append tr
 

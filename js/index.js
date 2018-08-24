@@ -248,7 +248,7 @@ window.draw = async function() {
       var rec;
       rec = (await window.db.get($(this).attr('dt-key')));
       return window.execCopy(rec.csa);
-    })));
+    })).append($('<a>').addClass('btn btn-sm btn-info').attr('href', res.url).attr('target', 'wars').html('棋譜')));
     results1.push(tbody.append(tr));
   }
   return results1;
