@@ -451,6 +451,7 @@ class window.Utl
     TIMEOUT_MSEC: 5000
 
     constructor:(@dbName = 'default', @dbVersion = 1)->
+      @db = null
       open = window.indexedDB.open(@dbName, @dbVersion)
       open.onupgradeneeded = (evt)=>
         res = evt.target.result
@@ -464,7 +465,8 @@ class window.Utl
       token = @genToken()
       @lock(token)
 
-      transaction = @db.transaction(@STORE_NAME, 'readwrite')
+      db = await @getDB()
+      transaction = db.transaction(@STORE_NAME, 'readwrite')
       store = transaction.objectStore(@STORE_NAME)
       request = store.put({kvstore_key: key, kvstore_value: JSON.stringify(value) })
       request.onsuccess = (evt)=>
@@ -487,7 +489,8 @@ class window.Utl
       token = @genToken()
       @lock(token)
 
-      transaction = @db.transaction(@STORE_NAME, 'readonly')
+      db = await @getDB()
+      transaction = db.transaction(@STORE_NAME, 'readonly')
       store = transaction.objectStore(@STORE_NAME)
       request = store.get(key)
       request.onsuccess = (evt)=>
@@ -513,7 +516,8 @@ class window.Utl
       @lock(token)
 
       res = {}
-      transaction = @db.transaction(@STORE_NAME, 'readonly')
+      db = await @getDB()
+      transaction = db.transaction(@STORE_NAME, 'readonly')
       store = transaction.objectStore(@STORE_NAME)
 
       for key in keys
@@ -539,7 +543,8 @@ class window.Utl
       @lock(token)
 
       keys = []
-      transaction = @db.transaction(@STORE_NAME, 'readonly')
+      db = await @getDB()
+      transaction = db.transaction(@STORE_NAME, 'readonly')
       store = transaction.objectStore(@STORE_NAME)
       request = store.openCursor()
       request.onsuccess = (evt)=>
@@ -601,3 +606,8 @@ class window.Utl
 
     genToken:->
       ''+(+new Date())+Utl.genPassword(128)
+
+    getDB:->
+      while @db is null
+        await Utl.sleep @LOCK_WAIT_MSEC
+      @db
