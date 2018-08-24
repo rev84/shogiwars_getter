@@ -13,11 +13,12 @@ foreach ($files as $file) {
     $name = file2name($num);
     $fileBuf = file_get_contents(dirname(__FILE__).'/scene/'.$file);
     list($sente, $gote) = bod2reg($fileBuf);
-    if (!isset($res[$name])) $res[$name] = [];
-    $res[$name] = array_merge($res[$name], [$sente, $gote]);
+    if (!isset($res[$name])) $res[$name] = [[], []];
+    $res[$name][0][] = $sente;
+    $res[$name][1][] = $gote;
 }
 
-file_put_contents(dirname(__FILE__).'/result.json', json_encode($res, JSON_UNESCAPED_UNICODE));
+file_put_contents(dirname(__FILE__).'/../js/scenes.js', 'window.SCENES = '.json_encode($res, JSON_UNESCAPED_UNICODE).';');
 
 function bod2reg($bodStr)
 {
@@ -109,15 +110,27 @@ function convertKoma($koma)
         ' 金' => 'e',
         ' 角' => 'f',
         ' 飛' => 'g',
-        ' 玉' => 'h',
-        'v歩' => '1',
-        'v香' => '2',
-        'v桂' => '3',
-        'v銀' => '4',
-        'v金' => '5',
-        'v角' => '6',
-        'v飛' => '7',
-        'v玉' => '8',
+        ' と' => 'h',
+        ' 杏' => 'i',
+        ' 圭' => 'j',
+        ' 全' => 'k',
+        ' 馬' => 'l',
+        ' 龍' => 'm',
+        ' 玉' => 'n',
+        'v歩' => 'o',
+        'v香' => 'p',
+        'v桂' => 'q',
+        'v銀' => 'r',
+        'v金' => 's',
+        'v角' => 't',
+        'v飛' => 'u',
+        'vと' => 'v',
+        'v杏' => 'w',
+        'v圭' => 'x',
+        'v全' => 'y',
+        'v馬' => 'z',
+        'v龍' => '0',
+        'v玉' => '1',
     ];
 
     return $def[$koma];
@@ -127,23 +140,36 @@ function turnKoma($koma)
 {
     $def = [
         '.' => '.',
-        '1' => 'a',
-        '2' => 'b',
-        '3' => 'c',
-        '4' => 'd',
-        '5' => 'e',
-        '6' => 'f',
-        '7' => 'g',
-        '8' => 'h',
-        'a' => '1',
-        'b' => '2',
-        'c' => '3',
-        'd' => '4',
-        'e' => '5',
-        'f' => '6',
-        'g' => '7',
-        'h' => '8',
+        'a' => 'o',
+        'b' => 'p',
+        'c' => 'q',
+        'd' => 'r',
+        'e' => 's',
+        'f' => 't',
+        'g' => 'u',
+        'h' => 'v',
+        'i' => 'w',
+        'j' => 'x',
+        'k' => 'y',
+        'l' => 'z',
+        'm' => '0',
+        'n' => '1',
+        'o' => 'a',
+        'p' => 'b',
+        'q' => 'c',
+        'r' => 'd',
+        's' => 'e',
+        't' => 'f',
+        'u' => 'g',
+        'v' => 'h',
+        'w' => 'i',
+        'x' => 'j',
+        'y' => 'k',
+        'z' => 'l',
+        '0' => 'm',
+        '1' => 'n',
     ];
+
 
     return $def[$koma];
 }

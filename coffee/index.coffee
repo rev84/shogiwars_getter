@@ -201,19 +201,19 @@ window.draw = ->
     ).append(
       $('<td>').addClass('center').html(my_rank)
     ).append(
-      $('<td>').addClass(if is_first then 'sente' else 'gote').html(if is_first then '先' else '')
+      $('<td>').attr('rowspan', 2).addClass(if is_first then 'sente' else 'gote').html(if is_first then '先' else '')
     ).append(
-      $('<td>').addClass(if is_first then 'gote' else 'sente').html(if is_first then '' else '先')
+      $('<td>').attr('rowspan', 2).addClass(if is_first then 'gote' else 'sente').html(if is_first then '' else '先')
     ).append(
       $('<td>').addClass('center').html(op_rank+(if is_friend then '<br><span class="label label-danger">友達</span>' else ''))
     ).append(
       $('<td>').addClass(if is_win is 1 then 'lose' else if is_win is 0 then 'win' else 'draw').html(op_name)
     ).append(
-      $('<td>').addClass(game_type_class).html(game_type)
+      $('<td>').attr('rowspan', 2).addClass(game_type_class).html(game_type)
     ).append(
-      $('<td>').addClass('center').html(dt)
+      $('<td>').attr('rowspan', 2).addClass('center').html(dt)
     ).append(
-      $('<td>').addClass('center').append(
+      $('<td>').attr('rowspan', 2).addClass('center').append(
         $('<button>')
         .addClass('btn btn-sm btn-primary')
         .attr('dt-key', res.kifu_name)
@@ -222,10 +222,24 @@ window.draw = ->
           rec = await window.db.get($(@).attr('dt-key'))
           window.execCopy(rec.csa)
         )
+      ).append(
+        $('<a>')
+        .addClass('btn btn-sm btn-info')
+        .attr('href', res.url)
+        .attr('target', 'wars')
+        .html('棋譜')
       )
     )
-
     tbody.append tr
+
+    tags = window.getTags(res.csa)
+    tr2 = $('<tr>')
+    for index in (if is_first then [0, 1] else [1, 0])
+      td = $('<td>').attr('colspan', 2)
+      for t in tags[index]
+        td.append $('<span>').addClass('label label-default').html(t)
+      tr2.append td
+    tbody.append tr2
 
 window.getIndexes = (userName)->
   return if window.isGettingList
@@ -386,3 +400,7 @@ window.getMine = ->
       if (is10m and v.game_type is '') or (is3m and v.game_type is 'sb') or (is10s and v.game_type is 's1')
         results.push v
   results
+
+window.getTags = (csa)->
+  b = new Board(csa)
+  b.getTags()
