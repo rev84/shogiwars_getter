@@ -156,7 +156,6 @@ window.finish = ->
   window.draw()
   window.isGettingList = false
   
-
 window.draw = ->
   results = await window.getMine()
   results.sort (a, b)->
@@ -196,6 +195,10 @@ window.draw = ->
       else 's10'
     dt = window.dateFormat(res.date)
 
+    tagTd = $('<td>')
+    for t in res.tags
+      tagTd.append $('<span>').addClass('senkei label label-default').html(t)
+
     tr = $('<tr>').append(
       $('<td>').addClass(if is_win is 1 then 'win' else if is_win is 0 then 'lose' else 'draw').html(my_name)
     ).append(
@@ -208,6 +211,8 @@ window.draw = ->
       $('<td>').addClass('center').html(op_rank+(if is_friend then '<br><span class="label label-danger">友達</span>' else ''))
     ).append(
       $('<td>').addClass(if is_win is 1 then 'lose' else if is_win is 0 then 'win' else 'draw').html(op_name)
+    ).append(
+      tagTd
     ).append(
       $('<td>').addClass(game_type_class).html(game_type)
     ).append(
@@ -230,9 +235,9 @@ window.draw = ->
         .html('棋譜')
       )
     )
-
-
     tbody.append tr
+
+
 
 window.getIndexes = (userName)->
   return if window.isGettingList
@@ -272,9 +277,9 @@ window.getIndexCallbackSuccess = (response)->
     result.win = 2
     # 対戦者の情報
     isFirst = true
-    for player in content.getElementsByClassName('history_prof')
-      [name, rank] = player.getElementsByTagName('table')[0].getElementsByTagName('td')[1].innerText.split(" ")
-      isWin = player.classList.contains('win')
+    for player in content.getElementsByClassName('players')[0].getElementsByTagName('div')
+      [name, rank] = window.trim(player.getElementsByTagName('a')[0].innerText).split(" ")
+      isWin = player.getElementsByTagName('a')[0].classList.contains('win_player')
 
       if isFirst
         result.sente = 
@@ -291,21 +296,22 @@ window.getIndexCallbackSuccess = (response)->
       isFirst = false
 
     # 時刻
-    result.date = if result.win is 2
-        new Date(content.getElementsByTagName('div')[3].innerText)
-      else
-        new Date(content.getElementsByTagName('div')[4].innerText)
+    dateStr = trim(content.getElementsByClassName('game_date')[0].innerText)
+    matchRes = dateStr.match(/\((.+)\)/)
+    if matchRes
+      result.date = new Date(matchRes[1])
+    else
+      result.date = new Date(dateStr)
     # 棋譜のURL
-    result.url = 'https:'+content.getElementsByClassName('short_btn1')[0].getElementsByTagName('a')[0].getAttribute('href')
+    result.url = 'https:'+content.getElementsByClassName('game_replay')[0].getElementsByTagName('a')[0].getAttribute('href')
     # 友達対戦であるか
-    isFriend = false
-    for div in content.getElementsByTagName('div')
-      if div.innerText is '友達'
-        isFriend = true
-        break
-    result.is_friend = isFriend
+    result.is_friend = !!content.getElementsByClassName('game_category')[0].innerText.match(/友達/)
     # 持ち時間タイプ
     result.game_type = window.gType
+    # 戦型
+    result.tags = []
+    for span in content.getElementsByClassName('game_params')[0].getElementsByClassName('hashtag_badge')
+      result.tags.push span.innerText.replace('#', '')
 
     # IndexedDBにあるか見る
     key = window.url2kifuName(result.url)
@@ -317,8 +323,7 @@ window.getIndexCallbackSuccess = (response)->
     else
       # 取得済みの棋譜がある
       isExistAlreadyGot = true
-
-
+      
   # 次のページがあればそれも取得
   isNext = false
   for a in doc.getElementsByTagName('a')
@@ -332,6 +337,7 @@ window.getIndexCallbackSuccess = (response)->
   # 次のページがなければ次のゲームモード
   window.getIndex() unless isNext
 
+  
 window.dateFormat = (dt)->
   dt = new Date(dt) if typeof(dt) is 'string'
   y = dt.getFullYear()
@@ -393,3 +399,6 @@ window.getMine = ->
       if (is10m and v.game_type is '') or (is3m and v.game_type is 'sb') or (is10s and v.game_type is 's1')
         results.push v
   results
+
+window.trim = (string)->
+  string.replace(/^\s+/g, "").replace(/\s+$/g, "")

@@ -192,7 +192,7 @@ window.finish = function() {
 };
 
 window.draw = async function() {
-  var dt, game_type, game_type_class, is_first, is_friend, is_win, j, len, my_name, my_rank, op_name, op_rank, res, results, results1, tbody, tr, url;
+  var dt, game_type, game_type_class, is_first, is_friend, is_win, j, l, len, len1, my_name, my_rank, op_name, op_rank, ref, res, results, results1, t, tagTd, tbody, tr, url;
   results = (await window.getMine());
   results.sort(function(a, b) {
     return b.date - a.date;
@@ -244,7 +244,13 @@ window.draw = async function() {
       }
     })();
     dt = window.dateFormat(res.date);
-    tr = $('<tr>').append($('<td>').addClass(is_win === 1 ? 'win' : is_win === 0 ? 'lose' : 'draw').html(my_name)).append($('<td>').addClass('center').html(my_rank)).append($('<td>').addClass(is_first ? 'sente' : 'gote').html(is_first ? '先' : '')).append($('<td>').addClass(is_first ? 'gote' : 'sente').html(is_first ? '' : '先')).append($('<td>').addClass('center').html(op_rank + (is_friend ? '<br><span class="label label-danger">友達</span>' : ''))).append($('<td>').addClass(is_win === 1 ? 'lose' : is_win === 0 ? 'win' : 'draw').html(op_name)).append($('<td>').addClass(game_type_class).html(game_type)).append($('<td>').addClass('center').html(dt)).append($('<td>').addClass('center').append($('<button>').addClass('btn btn-sm btn-primary').attr('dt-key', res.kifu_name).html('コピー').on('click', async function() {
+    tagTd = $('<td>');
+    ref = res.tags;
+    for (l = 0, len1 = ref.length; l < len1; l++) {
+      t = ref[l];
+      tagTd.append($('<span>').addClass('senkei label label-default').html(t));
+    }
+    tr = $('<tr>').append($('<td>').addClass(is_win === 1 ? 'win' : is_win === 0 ? 'lose' : 'draw').html(my_name)).append($('<td>').addClass('center').html(my_rank)).append($('<td>').addClass(is_first ? 'sente' : 'gote').html(is_first ? '先' : '')).append($('<td>').addClass(is_first ? 'gote' : 'sente').html(is_first ? '' : '先')).append($('<td>').addClass('center').html(op_rank + (is_friend ? '<br><span class="label label-danger">友達</span>' : ''))).append($('<td>').addClass(is_win === 1 ? 'lose' : is_win === 0 ? 'win' : 'draw').html(op_name)).append(tagTd).append($('<td>').addClass(game_type_class).html(game_type)).append($('<td>').addClass('center').html(dt)).append($('<td>').addClass('center').append($('<button>').addClass('btn btn-sm btn-primary').attr('dt-key', res.kifu_name).html('コピー').on('click', async function() {
       var rec;
       rec = (await window.db.get($(this).attr('dt-key')));
       return window.execCopy(rec.csa);
@@ -294,7 +300,7 @@ window.getIndexCallbackFail = function() {
 };
 
 window.getIndexCallbackSuccess = async function(response) {
-  var a, content, div, doc, isExistAlreadyGot, isFirst, isFriend, isNext, isWin, j, key, l, len, len1, len2, len3, name, o, parser, player, q, rank, ref, ref1, ref2, ref3, result, stored, url;
+  var a, content, dateStr, doc, isExistAlreadyGot, isFirst, isNext, isWin, j, key, l, len, len1, len2, len3, matchRes, name, o, parser, player, q, rank, ref, ref1, ref2, ref3, result, span, stored, url;
   // 既に取得した棋譜があるか
   isExistAlreadyGot = false;
   parser = new DOMParser();
@@ -308,11 +314,11 @@ window.getIndexCallbackSuccess = async function(response) {
     result.win = 2;
     // 対戦者の情報
     isFirst = true;
-    ref1 = content.getElementsByClassName('history_prof');
+    ref1 = content.getElementsByClassName('players')[0].getElementsByTagName('div');
     for (l = 0, len1 = ref1.length; l < len1; l++) {
       player = ref1[l];
-      [name, rank] = player.getElementsByTagName('table')[0].getElementsByTagName('td')[1].innerText.split(" ");
-      isWin = player.classList.contains('win');
+      [name, rank] = window.trim(player.getElementsByTagName('a')[0].innerText).split(" ");
+      isWin = player.getElementsByTagName('a')[0].classList.contains('win_player');
       if (isFirst) {
         result.sente = {
           name: name,
@@ -330,22 +336,26 @@ window.getIndexCallbackSuccess = async function(response) {
       isFirst = false;
     }
     // 時刻
-    result.date = result.win === 2 ? new Date(content.getElementsByTagName('div')[3].innerText) : new Date(content.getElementsByTagName('div')[4].innerText);
-    // 棋譜のURL
-    result.url = 'https:' + content.getElementsByClassName('short_btn1')[0].getElementsByTagName('a')[0].getAttribute('href');
-    // 友達対戦であるか
-    isFriend = false;
-    ref2 = content.getElementsByTagName('div');
-    for (o = 0, len2 = ref2.length; o < len2; o++) {
-      div = ref2[o];
-      if (div.innerText === '友達') {
-        isFriend = true;
-        break;
-      }
+    dateStr = trim(content.getElementsByClassName('game_date')[0].innerText);
+    matchRes = dateStr.match(/\((.+)\)/);
+    if (matchRes) {
+      result.date = new Date(matchRes[1]);
+    } else {
+      result.date = new Date(dateStr);
     }
-    result.is_friend = isFriend;
+    // 棋譜のURL
+    result.url = 'https:' + content.getElementsByClassName('game_replay')[0].getElementsByTagName('a')[0].getAttribute('href');
+    // 友達対戦であるか
+    result.is_friend = !!content.getElementsByClassName('game_category')[0].innerText.match(/友達/);
     // 持ち時間タイプ
     result.game_type = window.gType;
+    // 戦型
+    result.tags = [];
+    ref2 = content.getElementsByClassName('game_params')[0].getElementsByClassName('hashtag_badge');
+    for (o = 0, len2 = ref2.length; o < len2; o++) {
+      span = ref2[o];
+      result.tags.push(span.innerText.replace('#', ''));
+    }
     // IndexedDBにあるか見る
     key = window.url2kifuName(result.url);
     stored = (await window.db.get(key));
@@ -358,6 +368,7 @@ window.getIndexCallbackSuccess = async function(response) {
       isExistAlreadyGot = true;
     }
   }
+  
   // 次のページがあればそれも取得
   isNext = false;
   ref3 = doc.getElementsByTagName('a');
@@ -451,6 +462,10 @@ window.getMine = async function() {
     }
   }
   return results;
+};
+
+window.trim = function(string) {
+  return string.replace(/^\s+/g, "").replace(/\s+$/g, "");
 };
 
 window.Utl = (function() {
